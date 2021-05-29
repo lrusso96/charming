@@ -24,7 +24,7 @@ class CS98(PKEnc):
         x1, x2, y1, y2, z = (self.group.random() for i in range(5))
         c = (g1 ** x1) * (g2 ** x2)
         d = (g1 ** y1) * (g2 ** y2)
-        h = g1 ** z
+        h = (g1 ** z)
         pk = CS98_PK(g1=g1, g2=g2, c=c, d=d, h=h, H=self.group.hash)
         sk = CS98_SK(x1=x1, x2=x2, y1=y1, y2=y2, z=z)
         return (pk, sk)
@@ -37,7 +37,8 @@ class CS98(PKEnc):
         u1 = pk.g1 ** r
         u2 = pk.g2 ** r
         e = self.group.encode(m) * (pk.h ** r)
-        alpha = self.group.hash((u1, u2, e))
+        p = (u1, u2, e)
+        alpha = self.group.hash(p)
         v = (pk.c ** r) * (pk.d ** (r * alpha))
         return CS98_CIPHER(u1=u1, u2=u2, e=e, v=v)
 

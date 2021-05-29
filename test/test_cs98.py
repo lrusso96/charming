@@ -1,5 +1,5 @@
 from charm.toolbox.eccurve import prime192v1
-from cs98 import CS98, InputError
+from pke.cs98 import CS98, InputError
 
 import unittest
 
