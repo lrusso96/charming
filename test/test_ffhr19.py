@@ -9,8 +9,9 @@ import unittest
 class TestFFHR19(unittest.TestCase):
 
     def test_basic(self):
-        # create a MM_GROUP on Curve SS512
-        group = PairingGroup('SS512')
+        # create a MM_GROUP on Curve MNT159
+        curve = 'MNT159'
+        group = PairingGroup(curve)
         g1 = group.random(G1)
         g2 = group.random(G2)
         gT = pair(g1, g2)
