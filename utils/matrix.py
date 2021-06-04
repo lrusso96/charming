@@ -23,9 +23,13 @@ class IdentityMatrix(MatrixDistribution):
     def sample(self, gtype=ZR) -> list:
         # group.G.init() seems invalid :(
         # group = PairingGroup(self.group.curve) seems invalid too!
-        group = PairingGroup('SS1024')
+
+        group = PairingGroup('SS512') # toggle comment
+        #group = PairingGroup('SS1024') # toggle comment
+
         one = group.init(gtype, 1)
         zero = group.init(gtype, 0)
+  
         return [[one if i == j else zero for i in range(self.n)] for j in range(self.n)]
 
 
