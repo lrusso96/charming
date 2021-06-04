@@ -9,4 +9,5 @@ I have also developed an additive notation wrapper for BilinearGroup matrix oper
 
 ## Schemes
 
-- **CS98** on prime192v1 curve
+- **CS98** on elliptic curves
+- **FFHR19**  on type-3 bilinear group
