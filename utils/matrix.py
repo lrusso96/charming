@@ -1,4 +1,4 @@
-from charm.toolbox.pairinggroup import ZR, G1, G2, GT, pair
+from charm.toolbox.pairinggroup import PairingGroup, ZR, G1, G2, GT, pair
 
 from collections import namedtuple
 from functools import reduce
@@ -13,6 +13,22 @@ class MatrixDistribution():
         raise NotImplementedError
 
 
+class IdentityMatrix(MatrixDistribution):
+
+    def __init__(self, n: int, group: MM_GROUP):
+        self.n = n
+        self.group = group
+        self.gtype = ZR
+
+    def sample(self, gtype=ZR) -> list:
+        # group.G.init() seems invalid :(
+        # group = PairingGroup(self.group.curve) seems invalid too!
+        group = PairingGroup('SS1024')
+        one = group.init(gtype, 1)
+        zero = group.init(gtype, 0)
+        return [[one if i == j else zero for i in range(self.n)] for j in range(self.n)]
+
+
 class DK_MDDH(MatrixDistribution):
 
     def __init__(self, k: int, group: MM_GROUP):
@@ -22,6 +38,18 @@ class DK_MDDH(MatrixDistribution):
 
     def sample(self) -> list:
         return [[self.group.G.random(self.gtype) for i in range(self.k)] for j in range(self.k+1)]
+
+
+class D_MDDH(MatrixDistribution):
+
+    def __init__(self, n: int, d: int, group: MM_GROUP):
+        self.n = n
+        self.d = d
+        self.group = group
+        self.gtype = ZR
+
+    def sample(self) -> list:
+        return [[self.group.G.random(self.gtype) for i in range(self.d)] for j in range(self.n)]
 
 
 class MM():
@@ -91,12 +119,36 @@ class MM():
     def mat_had_div_mat(A, B):
         return [[A[i][j] / B[i][j] for j in range(len(A[0]))] for i in range(len(A))]
 
+    def tensor_transform(A) -> list:
+        # return reduce(lambda a, b: a+b, [row for row in MM.T(A)])
+        return reduce(lambda a, b: a+b, [row for row in A])
+
+    def tensor(A, B, atype, btype):
+        A, B = MM.T(A), MM.T(B)
+
+        m = []
+        for a in A:
+            for b in B:
+                if atype == btype == ZR:
+                    l = [[aa*bb for bb in b] for aa in a]
+                elif {atype, btype}.issubset({G1, G2}):
+                    l = [[pair(aa, bb) for bb in b] for aa in a]
+                elif btype == ZR:
+                    l = [[aa ** bb for bb in b] for aa in a]
+                elif atype == ZR:
+                    l = [[bb ** aa for bb in b] for aa in a]
+                else:
+                    raise NotImplementedError
+                m.append(MM.tensor_transform(l))
+        return MM.T(m)
+
 
 class MMMatrix(MM):
     def __init__(self, group: MM_GROUP, M, gtype):
         super().__init__(group)
         self.M = M
         self.gtype = gtype
+        self.dimension = len(M), len(M[0])
 
     def T(self):
         return MMMatrix(self.group, MM.T(self.M), self.gtype)
@@ -144,14 +196,25 @@ class MMMatrix(MM):
                 return MMMatrix(self.group, MM.mat_exp_mat(self.M, o.M), self.gtype)
             elif self.gtype == ZR and o.gtype != ZR:
                 return (o.T() * self.T()).T()
-            elif (self.gtype, o.gtype) in ((G1, G2), (G2, G1)):
+            elif {self.gtype, o.gtype}.issubset({G1, G2}):
                 return MMMatrix(self.group, MM.mat_pair_mat(self.M, o.M), GT)
         raise NotImplementedError
 
     def pair_with(self, o):
         if type(o) == MMMatrix:
-            if set((self.gtype, o.gtype)) == set((G1, G2)):
+            if {self.gtype, o.gtype}.issubset({G1, G2}):
                 return self.T() * o
+        raise NotImplementedError
+
+    def __matmul__(self, o):
+        if type(o) == MMMatrix:
+            if self.gtype == o.gtype == ZR:
+                gtype = ZR
+            elif {self.gtype, o.gtype}.issubset({G1, G2}):
+                gtype = GT
+            else:
+                gtype = G1
+            return MMMatrix(self.group, MM.tensor(self.M, o.M, self.gtype, o.gtype), gtype)
         raise NotImplementedError
 
     def __len__(self) -> int:
