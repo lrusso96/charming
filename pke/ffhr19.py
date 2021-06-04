@@ -1,8 +1,7 @@
 from charm.toolbox.PKEnc import PKEnc
-from charm.toolbox.pairinggroup import ZR, G1, G2, GT, pair
+from charm.toolbox.pairinggroup import G1, G2, GT
 
 from collections import namedtuple
-from functools import reduce
 
 from utils.matrix import MM, MatrixDistribution
 
@@ -42,15 +41,14 @@ class FFHR19(PKEnc):
         return pk, sk
 
     def encrypt(self, pk: FFHR_PK, msg):
-        r = self.mscheme.sample(self.k)
-        s = self.mscheme.sample(self.k)
+        r, s = (self.mscheme.sample(self.k) for i in range(2))
         u = pk.D * r
-        #msg = self.mscheme.sample(1, gtype=G1)
         p = pk.aTD * r + msg
         x = u | p
         v = pk.E * s
         pi1 = pk.fTD * r + (pk.FTD * r).pair_with(v)
         pi2 = pk.gTE * s + x.pair_with(pk.GTE * s)
+
         pi = pi1 + pi2
         return FFHR_CIPHER(u=u, p=p, v=v, pi=pi)
 
@@ -60,9 +58,7 @@ class FFHR19(PKEnc):
         pi1 = (sk.F * (c.v)).T() * c.u + sk.f.T() * (c.u >> GT)
         pi2 = (sk.G * x).T() * c.v + sk.g.T() * (c.v >> GT)
 
-        if(pi1 + pi2 == c.pi):
-            return msg
-        return None
+        return msg if pi1 + pi2 == c.pi else None
 
     def rand(self, pk, c):
         r, s = (self.mscheme.sample(self.k) for i in range(2))
