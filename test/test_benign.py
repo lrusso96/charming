@@ -1,4 +1,5 @@
 from utils.matrix import MM_GROUP, MM
+from charm.toolbox.pairinggroup import PairingGroup, G1, pair
 from ps.benign import BenignPS
 
 
